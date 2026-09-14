@@ -1,0 +1,5 @@
+# Build artifact, produced by ./build.sh
+*.vsix
+
+# Working notes for the next session, not part of the published extension
+issues/

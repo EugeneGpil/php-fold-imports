@@ -1,0 +1,18 @@
+{
+    "name": "php-fold-imports",
+    "displayName": "PHP Fold Imports",
+    "description": "Folding ranges for PHP, with the top-level use block tagged as imports so it collapses on open.",
+    "publisher": "local",
+    "version": "0.0.1",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "activationEvents": [
+        "onLanguage:php"
+    ],
+    "main": "./extension.js"
+}
