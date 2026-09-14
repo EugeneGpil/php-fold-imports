@@ -1,5 +1,7 @@
 # PHP Fold Imports
 
+[![test](https://github.com/EugeneGpil/php-fold-imports/actions/workflows/test.yml/badge.svg)](https://github.com/EugeneGpil/php-fold-imports/actions/workflows/test.yml)
+
 Folding ranges for PHP, with the `use` block tagged as an **imports** range — so VS Code
 collapses it the moment a file opens.
 
@@ -130,6 +132,10 @@ It has no dependency on the `vscode` module, which is what makes it testable as 
 node extension/test.js   # unit tests, no dependencies
 ./build.sh               # test, pack the vsix, reinstall, then reload the window
 ```
+
+Every push and pull request runs the same suite on GitHub Actions
+([`.github/workflows/test.yml`](.github/workflows/test.yml)), preceded by a `node --check` of
+the two files that ship.
 
 `extension/test.js` covers the edge cases listed above. The scanner has also been run over
 ~8,700 files of a large private Laravel codebase with no crashes and no out-of-bounds ranges;
