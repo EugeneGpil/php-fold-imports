@@ -6,6 +6,10 @@
     "version": "0.0.1",
     "license": "MIT",
     "icon": "icon.png",
+    "galleryBanner": {
+        "color": "#4F5B93",
+        "theme": "dark"
+    },
     "homepage": "https://github.com/EugeneGpil/php-fold-imports#readme",
     "repository": {
         "type": "git",
@@ -26,6 +30,9 @@
     },
     "categories": [
         "Programming Languages"
+    ],
+    "extensionKind": [
+        "workspace"
     ],
     "activationEvents": [
         "onLanguage:php"

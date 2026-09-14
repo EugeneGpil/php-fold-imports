@@ -13,6 +13,6 @@ jobs:
         with:
           node-version: '20'
       - name: Syntax check the packaged sources
-        run: node --check extension/folding.js && node --check extension/extension.js
+        run: node --check folding.js && node --check extension.js
       - name: Unit tests
-        run: node extension/test.js
+        run: node test.js

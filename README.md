@@ -48,7 +48,7 @@ which is more accurate because it comes from a real parser.
 
 ## What it provides
 
-Four kinds of folding range, from a single scan of the file:
+Five kinds of folding range, from a single scan of the file:
 
 | Range | Kind | Notes |
 |---|---|---|
@@ -138,7 +138,7 @@ It has no dependency on the `vscode` module, which is what makes it testable as 
 ## Development
 
 ```sh
-node extension/test.js   # unit tests, no dependencies
+node test.js             # unit tests, no dependencies
 ./build.sh               # test, pack the vsix, reinstall, then reload the window
 ```
 
@@ -146,7 +146,7 @@ Every push and pull request runs the same suite on GitHub Actions
 ([`.github/workflows/test.yml`](.github/workflows/test.yml)), preceded by a `node --check` of
 the two files that ship.
 
-`extension/test.js` covers the edge cases listed above. The scanner has also been run over
+`test.js` covers the edge cases listed above. The scanner has also been run over
 ~8,700 files of a large private Laravel codebase with no crashes and no out-of-bounds ranges;
 the slowest file was a 4 MB generated array at ~100 ms. Alternative syntax was checked
 separately against 500 real templates that use it, which produced 1,617 folds and changed no
@@ -156,4 +156,4 @@ range the brace scanner had already found. `#region` support was checked the sam
 
 ## License
 
-MIT — see [extension/LICENSE.txt](extension/LICENSE.txt).
+MIT — see [LICENSE.txt](LICENSE.txt).

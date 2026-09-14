@@ -1,0 +1,7 @@
+test.js
+build.sh
+.vscodeignore
+.github/**
+issues/**
+*.vsix
+.gitignore
