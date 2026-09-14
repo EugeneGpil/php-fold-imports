@@ -79,10 +79,20 @@ VS Code 1.80 or newer. No dependencies, no language server, no configuration fil
 
 ## Install
 
-From a `.vsix`:
+From the Marketplace:
 
 ```sh
-code --install-extension php-fold-imports-0.0.1.vsix
+code --install-extension eugenegpil.php-fold-imports
+```
+
+Or search **PHP Fold Imports** in the Extensions view. It is also on
+[Open VSX](https://open-vsx.org/extension/eugenegpil/php-fold-imports) for VSCodium, Cursor,
+Gitpod and the other forks.
+
+From a `.vsix`, if you are installing a build that is not on a registry:
+
+```sh
+code --install-extension php-fold-imports-1.0.0.vsix
 ```
 
 Copying the extension folder into `~/.vscode/extensions/` by hand does **not** work on current

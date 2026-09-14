@@ -3,7 +3,7 @@
     "displayName": "PHP Fold Imports",
     "description": "Folding ranges for PHP, with the top-level use block tagged as imports so it collapses on open.",
     "publisher": "eugenegpil",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "license": "MIT",
     "icon": "icon.png",
     "galleryBanner": {
