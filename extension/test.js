@@ -6,6 +6,7 @@ const { computeFoldingRanges } = require('./folding');
 const imports = (text) => computeFoldingRanges(text).filter((range) => range.kind === 'imports');
 const all = (text) => computeFoldingRanges(text);
 const blocks = (text) => computeFoldingRanges(text).filter((range) => range.kind === null);
+const regions = (text) => computeFoldingRanges(text).filter((range) => range.kind === 'region');
 
 const cases = {
     'single use does not fold': () => {
@@ -150,6 +151,46 @@ const cases = {
     'keywords are matched case-insensitively': () => {
         const text = '<?php\nIF ($a):\n    echo 1;\nENDIF;\n';
         assert.deepStrictEqual(blocks(text), [{ start: 1, end: 2, kind: null }]);
+    },
+    'a region folds, swallowing its end marker': () => {
+        const text = '<?php\n// #region Helpers\nfunction a() {}\nfunction b() {}\n// #endregion\n';
+        assert.deepStrictEqual(regions(text), [{ start: 1, end: 4, kind: 'region' }]);
+    },
+    'nested regions produce two nested ranges': () => {
+        const text =
+            '<?php\n// #region Outer\n$a = 1;\n// #region Inner\n$b = 2;\n// #endregion\n$c = 3;\n// #endregion\n';
+        assert.deepStrictEqual(regions(text), [
+            { start: 3, end: 5, kind: 'region' },
+            { start: 1, end: 7, kind: 'region' },
+        ]);
+    },
+    'all three marker spellings fold': () => {
+        const spellings = [
+            ['#region', '#endregion'],
+            ['//region', '//endregion'],
+            ['// #region', '// #endregion'],
+        ];
+        for (const [start, end] of spellings) {
+            const text = `<?php\n${start} Helpers\n$a = 1;\n${end}\n`;
+            assert.deepStrictEqual(regions(text), [{ start: 1, end: 3, kind: 'region' }], start);
+        }
+    },
+    'an attribute next to a hash region breaks neither': () => {
+        const text =
+            '<?php\n#[Attr]\nclass X\n{\n    #region Helpers\n    public function a() {}\n    #endregion\n}\n';
+        assert.deepStrictEqual(regions(text), [{ start: 4, end: 6, kind: 'region' }]);
+        assert.deepStrictEqual(blocks(text), [{ start: 3, end: 6, kind: null }]);
+    },
+    'an unmatched endregion emits nothing': () => {
+        assert.deepStrictEqual(regions('<?php\n$a = 1;\n// #endregion\n$b = 2;\n'), []);
+    },
+    'an unclosed region emits nothing': () => {
+        assert.deepStrictEqual(regions('<?php\n// #region Open\n$a = 1;\n$b = 2;\n'), []);
+    },
+    'markers inside a heredoc body are ignored': () => {
+        const text =
+            '<?php\n$s = <<<TXT\n// #region Fake\n    body\n// #endregion\nTXT;\n\n// #region Real\n$a = 1;\n// #endregion\n';
+        assert.deepStrictEqual(regions(text), [{ start: 7, end: 9, kind: 'region' }]);
     },
 };
 

@@ -7,6 +7,12 @@ const HEREDOC_HEADER = new RegExp(
 );
 const MEMBER_ACCESS = /(->|\?->|::)[ \t\r\n]*$/;
 
+// Copied verbatim from the `folding.markers` of VS Code's own PHP language configuration, so
+// that a marker folds here exactly where it folded before this provider displaced the
+// indentation one. Anchored at the line start, not at the comment.
+const REGION_START = /^\s*(#|\/\/|\/\/ #)region\b/;
+const REGION_END = /^\s*(#|\/\/|\/\/ #)endregion\b/;
+
 // PHP's alternative syntax - `if (...): ... endif;` - carries no braces, so it needs a
 // stack of its own next to the brace stack. The two nest independently.
 const ALTERNATIVE_OPENERS = new Set([
@@ -35,16 +41,18 @@ const ALTERNATIVE_FIRST_CODES = new Set(
  * Returns plain objects so this file stays testable outside VS Code.
  *
  * @param {string} text
- * @returns {{start: number, end: number, kind: ('imports'|'comment'|null)}[]}
+ * @returns {{start: number, end: number, kind: ('imports'|'comment'|'region'|null)}[]}
  */
 function computeFoldingRanges(text) {
     const ranges = [];
     const stack = [];
     const alternativeStack = [];
+    const regionStack = [];
     const length = text.length;
 
     let index = 0;
     let line = 0;
+    let lineStart = 0;
     let isInPhp = false;
     let isInUseStatement = false;
     let useStatementLine = 0;
@@ -70,6 +78,7 @@ function computeFoldingRanges(text) {
         for (let at = index; at < stop; at++) {
             if (text[at] === '\n') {
                 line++;
+                lineStart = at + 1;
             }
         }
         index = stop;
@@ -87,8 +96,22 @@ function computeFoldingRanges(text) {
         return at;
     };
 
-    const skipToLineEnd = () => {
-        index = findLineEnd(index);
+    // Both `//` and `#` line comments land here, because a comment is also where a
+    // `#region` / `#endregion` marker lives - the line has to be tested before its text is
+    // thrown away. The end marker is swallowed by the fold, which is what VS Code's own
+    // marker provider does; brace ranges stop a line short instead so the `}` stays visible.
+    const consumeLineComment = () => {
+        const lineEnd = findLineEnd(index);
+        const lineText = text.slice(lineStart, lineEnd);
+        if (REGION_START.test(lineText)) {
+            regionStack.push(line);
+        } else if (REGION_END.test(lineText)) {
+            const start = regionStack.pop();
+            if (start !== undefined && line > start) {
+                ranges.push({ start, end: line, kind: 'region' });
+            }
+        }
+        index = lineEnd;
     };
 
     const skipTrivia = (from) => {
@@ -186,6 +209,7 @@ function computeFoldingRanges(text) {
         if (char === '\n') {
             line++;
             index++;
+            lineStart = index;
             continue;
         }
 
@@ -214,7 +238,7 @@ function computeFoldingRanges(text) {
         }
 
         if (char === '/' && text[index + 1] === '/') {
-            skipToLineEnd();
+            consumeLineComment();
             continue;
         }
 
@@ -224,7 +248,7 @@ function computeFoldingRanges(text) {
                 index += 2;
                 continue;
             }
-            skipToLineEnd();
+            consumeLineComment();
             continue;
         }
 

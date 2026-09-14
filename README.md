@@ -48,19 +48,20 @@ which is more accurate because it comes from a real parser.
 
 ## What it provides
 
-Three kinds of folding range, from a single scan of the file:
+Four kinds of folding range, from a single scan of the file:
 
 | Range | Kind | Notes |
 |---|---|---|
 | The top-level `use` block | `Imports` | Only when it spans more than one line. This is what `foldingImportsByDefault` collapses. |
 | `{ … }` and `[ … ]` blocks | — | Classes, functions, control flow, array literals. |
 | `if (…): … endif;` blocks | — | PHP's alternative syntax, including `elseif`/`else` branches. |
+| `#region … #endregion` | `Region` | All three spellings VS Code's PHP configuration accepts: `#region`, `//region`, `// #region`. |
 | `/* … */` and `/** … */` | `Comment` | Multi-line only. |
 
-The last two are not a bonus feature. Registering *any* folding provider for a language turns
-off VS Code's indentation fallback, so an extension that contributed only the imports range
-would take class and function folding away with one hand while giving you the import fold with
-the other.
+Everything below the first row is not a bonus feature. Registering *any* folding provider for
+a language turns off VS Code's indentation fallback, so an extension that contributed only the
+imports range would take class folding and `#region` markers away with one hand while giving
+you the import fold with the other.
 
 The scanner understands PHP well enough not to be fooled by the usual traps: single- and
 double-quoted strings, heredoc and nowdoc bodies, line and block comments, `#[Attributes]`
@@ -68,7 +69,9 @@ double-quoted strings, heredoc and nowdoc bodies, line and block comments, `#[At
 `use ($captured)` capture list, a `use SomeTrait;` inside a class body, a grouped
 `use App\{A, B};` spread over several lines, and a method call that happens to be named
 `use()`. On the alternative-syntax side it tells a block-opening `:` apart from a ternary,
-a return type, a named argument and an enum backing type.
+a return type, a named argument and an enum backing type. Region markers are matched inside
+the same scan, so a `#region` sitting in a heredoc body is text rather than a marker — which
+is more than VS Code's own line-by-line marker matching manages.
 
 ## Requirements
 
@@ -103,10 +106,6 @@ into its own first line with a chevron; `Ctrl+K Ctrl+J` unfolds everything in th
 
 ## Limitations
 
-One of these is a thing you *lose*, so it is worth reading before you install:
-
-- **`#region` / `#endregion` markers stop working.** VS Code implements them inside the same
-  indentation-based provider that this extension displaces.
 - **Blade is untouched.** `.blade.php` files are usually mapped to the `blade` language, and
   this extension only registers for `php`. A `@php use …; @endphp` header will not fold.
 - **It is a scanner, not a parser.** It has no syntax tree and no symbol table. It is fast and
@@ -126,6 +125,13 @@ a parenthesised condition and then a `:`, which is what keeps ternaries, return 
 arguments and enum backing types out of it. `elseif` and `else` close the branch above them
 before opening their own, so a chain folds branch by branch the way `if {…} else {…}` does.
 
+`#region` markers have a third stack. The marker regexes are copied verbatim from the
+`folding.markers` of VS Code's own PHP language configuration, and the range they produce
+swallows the `#endregion` line the way VS Code's marker provider does — unlike a brace range,
+which stops a line short so the `}` stays visible. Registering a folding provider is what
+takes markers away in the first place: VS Code computes them inside the indentation provider,
+and that provider is only consulted when no syntax provider returns anything.
+
 It has no dependency on the `vscode` module, which is what makes it testable as plain Node —
 `extension.js` is a thin adapter that turns its output into `vscode.FoldingRange` objects.
 
@@ -144,7 +150,9 @@ the two files that ship.
 ~8,700 files of a large private Laravel codebase with no crashes and no out-of-bounds ranges;
 the slowest file was a 4 MB generated array at ~100 ms. Alternative syntax was checked
 separately against 500 real templates that use it, which produced 1,617 folds and changed no
-range the brace scanner had already found.
+range the brace scanner had already found. `#region` support was checked the same way, against
+19,000 files, and against VS Code's own output read out of a running editor with the internal
+`_executeFoldingRangeProvider` command.
 
 ## License
 

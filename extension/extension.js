@@ -6,6 +6,7 @@ const { computeFoldingRanges } = require('./folding');
 const KINDS = {
     imports: vscode.FoldingRangeKind.Imports,
     comment: vscode.FoldingRangeKind.Comment,
+    region: vscode.FoldingRangeKind.Region,
 };
 
 /**
