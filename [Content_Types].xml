@@ -6,4 +6,5 @@
     <Default Extension=".vsixmanifest" ContentType="text/xml" />
     <Default Extension=".md" ContentType="text/markdown" />
     <Default Extension=".txt" ContentType="text/plain" />
+    <Default Extension=".png" ContentType="image/png" />
 </Types>

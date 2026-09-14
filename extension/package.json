@@ -2,9 +2,25 @@
     "name": "php-fold-imports",
     "displayName": "PHP Fold Imports",
     "description": "Folding ranges for PHP, with the top-level use block tagged as imports so it collapses on open.",
-    "publisher": "local",
+    "publisher": "eugenegpil",
     "version": "0.0.1",
     "license": "MIT",
+    "icon": "icon.png",
+    "homepage": "https://github.com/EugeneGpil/php-fold-imports#readme",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/EugeneGpil/php-fold-imports.git"
+    },
+    "bugs": {
+        "url": "https://github.com/EugeneGpil/php-fold-imports/issues"
+    },
+    "keywords": [
+        "php",
+        "folding",
+        "imports",
+        "use",
+        "fold"
+    ],
     "engines": {
         "vscode": "^1.80.0"
     },
