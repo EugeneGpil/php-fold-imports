@@ -5,6 +5,7 @@ const { computeFoldingRanges } = require('./folding');
 
 const imports = (text) => computeFoldingRanges(text).filter((range) => range.kind === 'imports');
 const all = (text) => computeFoldingRanges(text);
+const blocks = (text) => computeFoldingRanges(text).filter((range) => range.kind === null);
 
 const cases = {
     'single use does not fold': () => {
@@ -78,6 +79,77 @@ const cases = {
         assert.deepStrictEqual(all(text).filter((range) => range.kind === null), [
             { start: 7, end: 8, kind: null },
         ]);
+    },
+    'alternative if folds': () => {
+        const text = '<?php\nif ($a):\n    echo 1;\nendif;\n';
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 2, kind: null }]);
+    },
+    'if elseif else endif yields three ranges': () => {
+        const text =
+            '<?php\nif ($a):\n    echo 1;\nelseif ($b):\n    echo 2;\nelse:\n    echo 3;\nendif;\n';
+        assert.deepStrictEqual(blocks(text), [
+            { start: 1, end: 2, kind: null },
+            { start: 3, end: 4, kind: null },
+            { start: 5, end: 6, kind: null },
+        ]);
+    },
+    'alternative foreach nests inside an alternative if': () => {
+        const text =
+            '<?php\nif ($a):\n    foreach ($items as $item):\n        echo $item;\n    endforeach;\nendif;\n';
+        assert.deepStrictEqual(blocks(text), [
+            { start: 2, end: 3, kind: null },
+            { start: 1, end: 4, kind: null },
+        ]);
+    },
+    'alternative switch folds as one range': () => {
+        const text =
+            '<?php\nswitch ($a):\n    case 1:\n        echo 1;\n        break;\nendswitch;\n';
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 4, kind: null }]);
+    },
+    'semicolons inside the for parens do not break it': () => {
+        const text = '<?php\nfor ($i = 0; ; ):\n    echo $i;\nendfor;\n';
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 2, kind: null }]);
+    },
+    'do while produces exactly one range from its braces': () => {
+        const text = '<?php\ndo {\n    echo 1;\n} while ($x);\n';
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 2, kind: null }]);
+    },
+    'colons that do not open a block are ignored': () => {
+        const text =
+            '<?php\n$x = $a ? $b : $c;\nfunction f(): void {}\nf(cond: true);\nenum Suit: string {}\n';
+        assert.deepStrictEqual(blocks(text), []);
+    },
+    'a template folds at every level across inline html': () => {
+        const text = [
+            '<?php if ($order->isPaid()): ?>',
+            '    <p>Paid</p>',
+            '<?php foreach ($items as $item): ?>',
+            '    <li><?= $item->name ?></li>',
+            '<?php endforeach; ?>',
+            '<?php endif; ?>',
+            '',
+        ].join('\n');
+        assert.deepStrictEqual(blocks(text), [
+            { start: 2, end: 3, kind: null },
+            { start: 0, end: 4, kind: null },
+        ]);
+    },
+    'a condition spanning lines still opens the block': () => {
+        const text =
+            '<?php\nif (\n    $a\n    && $b\n):\n    echo 1;\nendif;\n';
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 5, kind: null }]);
+    },
+    'a closing paren inside a string does not end the condition': () => {
+        const text = "<?php\nif ($a === ') :'):\n    echo 1;\nendif;\n";
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 2, kind: null }]);
+    },
+    'a method named endif is not a closer': () => {
+        const text = '<?php\nif ($a):\n    $tpl->endif();\n    echo 1;\nendif;\n';
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 3, kind: null }]);
+    },
+    'keywords are matched case-insensitively': () => {
+        const text = '<?php\nIF ($a):\n    echo 1;\nENDIF;\n';
+        assert.deepStrictEqual(blocks(text), [{ start: 1, end: 2, kind: null }]);
     },
 };
 

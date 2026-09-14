@@ -7,6 +7,21 @@ const HEREDOC_HEADER = new RegExp(
 );
 const MEMBER_ACCESS = /(->|\?->|::)[ \t\r\n]*$/;
 
+// PHP's alternative syntax - `if (...): ... endif;` - carries no braces, so it needs a
+// stack of its own next to the brace stack. The two nest independently.
+const ALTERNATIVE_OPENERS = new Set([
+    'if', 'elseif', 'else', 'for', 'foreach', 'while', 'switch', 'declare',
+]);
+const ALTERNATIVE_CLOSERS = new Set([
+    'endif', 'endfor', 'endforeach', 'endwhile', 'endswitch', 'enddeclare',
+]);
+// A gate cheap enough to run on every identifier: a generated file can hold hundreds of
+// thousands of them, and lowercasing each one to miss both sets costs real time. `| 0x20`
+// folds an ASCII letter to lower case and leaves digits where they are.
+const ALTERNATIVE_FIRST_CODES = new Set(
+    ['d', 'e', 'f', 'i', 's', 'w'].map((char) => char.charCodeAt(0))
+);
+
 /**
  * Folding ranges for PHP source, computed from a single character scan.
  *
@@ -25,6 +40,7 @@ const MEMBER_ACCESS = /(->|\?->|::)[ \t\r\n]*$/;
 function computeFoldingRanges(text) {
     const ranges = [];
     const stack = [];
+    const alternativeStack = [];
     const length = text.length;
 
     let index = 0;
@@ -59,15 +75,109 @@ function computeFoldingRanges(text) {
         index = stop;
     };
 
-    const skipToLineEnd = () => {
-        let at = index;
+    // Stops *at* the newline or `?>` rather than past it: the main loop handles both.
+    const findLineEnd = (from) => {
+        let at = from;
         while (at < length && text[at] !== '\n') {
             if (text[at] === '?' && text[at + 1] === '>') {
                 break;
             }
             at++;
         }
-        index = at;
+        return at;
+    };
+
+    const skipToLineEnd = () => {
+        index = findLineEnd(index);
+    };
+
+    const skipTrivia = (from) => {
+        let at = from;
+        while (at < length) {
+            const char = text[at];
+            if (char === ' ' || char === '\t' || char === '\r' || char === '\n') {
+                at++;
+                continue;
+            }
+            if (char === '/' && text[at + 1] === '/') {
+                at = findLineEnd(at);
+                continue;
+            }
+            if (char === '#' && text[at + 1] !== '[') {
+                at = findLineEnd(at);
+                continue;
+            }
+            if (char === '/' && text[at + 1] === '*') {
+                const close = text.indexOf('*/', at + 2);
+                at = close === -1 ? length : close + 2;
+                continue;
+            }
+            break;
+        }
+        return at;
+    };
+
+    // `from` must sit on `(`. Returns the offset just past the matching `)`, or -1.
+    const findParenEnd = (from) => {
+        let depth = 0;
+        let at = from;
+        while (at < length) {
+            const skipped = skipTrivia(at);
+            if (skipped > at) {
+                at = skipped;
+                continue;
+            }
+            const char = text[at];
+            if (char === "'" || char === '"' || char === '`') {
+                at++;
+                while (at < length) {
+                    if (text[at] === '\\') {
+                        at += 2;
+                        continue;
+                    }
+                    if (text[at] === char) {
+                        at++;
+                        break;
+                    }
+                    at++;
+                }
+                continue;
+            }
+            if (char === '(') {
+                depth++;
+            } else if (char === ')') {
+                depth--;
+                if (depth === 0) {
+                    return at + 1;
+                }
+            }
+            at++;
+        }
+        return -1;
+    };
+
+    // Lookahead only - the scanner is left on the keyword so the condition, and any braces
+    // or strings inside it, still go through the main loop.
+    const startsAlternativeBlock = (word, after) => {
+        let cursor = skipTrivia(after);
+        if (word !== 'else') {
+            if (text[cursor] !== '(') {
+                return false;
+            }
+            cursor = findParenEnd(cursor);
+            if (cursor === -1) {
+                return false;
+            }
+            cursor = skipTrivia(cursor);
+        }
+        return text[cursor] === ':' && text[cursor + 1] !== ':';
+    };
+
+    const closeAlternativeBlock = () => {
+        const open = alternativeStack.pop();
+        if (open !== undefined && line > open.line) {
+            ranges.push({ start: open.line, end: line - 1, kind: null });
+        }
     };
 
     while (index < length) {
@@ -182,6 +292,21 @@ function computeFoldingRanges(text) {
             if (isAwaitingNextImport()) {
                 flushImports();
             }
+
+            const mayBeKeyword =
+                !isMemberAccess && ALTERNATIVE_FIRST_CODES.has(text.charCodeAt(index) | 0x20);
+            const keyword = mayBeKeyword ? word.toLowerCase() : '';
+            if (ALTERNATIVE_CLOSERS.has(keyword)) {
+                closeAlternativeBlock();
+            } else if (ALTERNATIVE_OPENERS.has(keyword) && startsAlternativeBlock(keyword, at)) {
+                // `elseif` and `else` end the branch above them before opening their own,
+                // the way `if {…} else {…}` gives two separate brace folds.
+                if (keyword === 'elseif' || keyword === 'else') {
+                    closeAlternativeBlock();
+                }
+                alternativeStack.push({ line });
+            }
+
             index = at;
             continue;
         }
