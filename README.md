@@ -2,6 +2,8 @@
 
 [![test](https://github.com/EugeneGpil/php-fold-imports/actions/workflows/test.yml/badge.svg)](https://github.com/EugeneGpil/php-fold-imports/actions/workflows/test.yml)
 
+**[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=eugenegpil.php-fold-imports)** · **[Open VSX](https://open-vsx.org/extension/eugenegpil/php-fold-imports)**
+
 Folding ranges for PHP, with the `use` block tagged as an **imports** range — so VS Code
 collapses it the moment a file opens.
 
@@ -79,7 +81,7 @@ VS Code 1.80 or newer. No dependencies, no language server, no configuration fil
 
 ## Install
 
-From the Marketplace:
+From the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=eugenegpil.php-fold-imports):
 
 ```sh
 code --install-extension eugenegpil.php-fold-imports
